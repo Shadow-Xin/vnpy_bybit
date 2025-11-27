@@ -9,9 +9,9 @@ from typing import Callable
 from zoneinfo import ZoneInfo
 from functools import partial
 
-from vnpy_evo.event import EventEngine, Event
-from vnpy_evo.trader.event import EVENT_TIMER
-from vnpy_evo.trader.constant import (
+from vnpy.event import EventEngine, Event
+from vnpy.trader.event import EVENT_TIMER
+from vnpy.trader.constant import (
     Direction,
     Exchange,
     Interval,
@@ -21,8 +21,8 @@ from vnpy_evo.trader.constant import (
     Offset,
     OptionType
 )
-from vnpy_evo.trader.gateway import BaseGateway
-from vnpy_evo.trader.object import (
+from vnpy.trader.gateway import BaseGateway
+from vnpy.trader.object import (
     AccountData,
     BarData,
     CancelRequest,
@@ -35,12 +35,12 @@ from vnpy_evo.trader.object import (
     TickData,
     TradeData
 )
-from vnpy_evo.rest import Request, RestClient
-from vnpy_evo.websocket import WebsocketClient
+from .vnpy_evo_rest import Request, RestClient
+from .vnpy_evo_websocket import WebsocketClient
 
 
 # Timezone
-BYBIT_TZ: ZoneInfo = ZoneInfo("Asia/Shanghai")
+BYBIT_TZ: ZoneInfo = ZoneInfo("UTC")
 
 # Real server hosts
 REAL_REST_HOST: str = "https://api.bybit.com"
@@ -135,6 +135,7 @@ class BybitGateway(BaseGateway):
     default_setting: dict[str, str] = {
         "API Key": "",
         "Secret Key": "",
+        "prefix": "",
         "Server": ["REAL", "DEMO"],
         "Proxy Host": "",
         "Proxy Port": "",
@@ -179,6 +180,7 @@ class BybitGateway(BaseGateway):
             proxy_host,
             proxy_port
         )
+        self.rest_api.prefix = setting["prefix"]
         self.private_ws_api.connect(
             key,
             secret,
@@ -251,6 +253,7 @@ class BybitRestApi(RestClient):
 
         self.key: str = ""
         self.secret: str = ""
+        self.prefix: str = ""
 
         self.time_offset: int = 0
         self.order_count: int = 0
@@ -290,7 +293,10 @@ class BybitRestApi(RestClient):
 
     def new_orderid(self) -> str:
         """Generate local order id"""
-        prefix: str = datetime.now().strftime("%Y%m%d-%H%M%S-")
+        if not self.prefix:
+            prefix: str = datetime.now().strftime("%Y%m%d-%H%M%S-")
+        else:
+            prefix: str = self.prefix
 
         self.order_count += 1
         suffix: str = str(self.order_count).rjust(8, "0")
