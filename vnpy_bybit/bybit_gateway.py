@@ -347,7 +347,8 @@ class BybitRestApi(RestClient):
 
     def query_contract(self) -> None:
         """Query available contract"""
-        for category in ["spot", "linear", "inverse", "option"]:
+        # for category in ["spot", "linear", "inverse", "option"]:
+        for category in ["linear", "inverse", "option"]:
             params: dict = {
                 "category": category,
                 "limit": 1000
@@ -385,7 +386,8 @@ class BybitRestApi(RestClient):
 
     def query_account(self) -> None:
         """Query account balance"""
-        for account_type in ["UNIFIED", "CONTRACT"]:
+        # for account_type in ["UNIFIED", "CONTRACT"]:
+        for account_type in ["UNIFIED"]:
             params: dict = {"accountType": account_type}
 
             self.add_request(
