@@ -11,6 +11,7 @@ from functools import partial
 
 from vnpy.event import EventEngine, Event
 from vnpy.trader.event import EVENT_TIMER
+from vnpy.trader.database import DB_TZ
 from vnpy.trader.constant import (
     Direction,
     Exchange,
@@ -38,9 +39,6 @@ from vnpy.trader.object import (
 from .vnpy_evo_rest import Request, RestClient
 from .vnpy_evo_websocket import WebsocketClient
 
-
-# Timezone
-BYBIT_TZ: ZoneInfo = ZoneInfo("UTC")
 
 # Real server hosts
 REAL_REST_HOST: str = "https://api.bybit.com"
@@ -569,6 +567,11 @@ class BybitRestApi(RestClient):
         index.sort()
 
         history: list[BarData] = [buf[i] for i in index]
+
+        # Remove the unclosed kline
+        if history:
+            history.pop(-1)
+
         return history
 
     def on_failed(self, status_code: int, request: Request) -> None:
@@ -1224,8 +1227,8 @@ def generate_signature(secret: str, param_str: str) -> str:
 
 def generate_datetime(timestamp: int) -> datetime:
     """Generate datetime object from timestamp"""
-    dt: datetime = datetime.fromtimestamp(timestamp / 1000)
-    return dt.replace(tzinfo=BYBIT_TZ)
+    dt: datetime = datetime.fromtimestamp(timestamp / 1000, tz=DB_TZ)
+    return dt
 
 
 def prepare_payload(method: str, parameters: dict) -> str:
