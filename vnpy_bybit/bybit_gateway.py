@@ -128,7 +128,7 @@ class BybitGateway(BaseGateway):
     The Bybit trading gateway for VeighNa.
     """
 
-    default_name = "BYBIT"
+    default_name: str = "BYBIT"
 
     default_setting: dict[str, str] = {
         "API Key": "",
@@ -138,8 +138,6 @@ class BybitGateway(BaseGateway):
         "Proxy Host": "",
         "Proxy Port": "",
     }
-
-    default_name: str = "BYBIT"
 
     exchanges: list[Exchange] = [Exchange.BYBIT]
 
@@ -850,13 +848,6 @@ class BybitPublicWebsocketApi:
                 "option": DEMO_OPTION_WEBSOCKET_HOST,
             }
 
-        category_host_map: dict = {
-            "spot": REAL_SPOT_WEBSOCKET_HOST,
-            "linear": REAL_LINEAR_WEBSOCKET_HOST,
-            "inverse": REAL_INVERSE_WEBSOCKET_HOST,
-            "option": REAL_OPTION_WEBSOCKET_HOST,
-        }
-
         host: str = category_host_map[category]
 
         # Start conection
@@ -944,7 +935,7 @@ class BybitPublicWebsocketApi:
     def on_disconnected(self, category: str, status_code: int, msg: str) -> None:
         """Callback when server is disconnected"""
         client: WebsocketClient = self.get_client(category)
-        client.is_connected = False
+        # client.is_connected = False
 
         self.gateway.write_log(f"Public websocket stream of {category} is disconnected")
 
@@ -1105,7 +1096,7 @@ class BybitPrivateWebsocketApi(WebsocketClient):
 
     def on_disconnected(self, status_code: int, msg: str) -> None:
         """Callback when server is disconnected"""
-        self.is_connected = False
+        # self.is_connected = False
         self.gateway.write_log("Private websocket stream is disconnected")
 
     def on_packet(self, packet: dict) -> None:
