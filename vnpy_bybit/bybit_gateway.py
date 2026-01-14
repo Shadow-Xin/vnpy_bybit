@@ -225,10 +225,12 @@ class BybitGateway(BaseGateway):
     def process_timer_event(self, event: Event) -> None:
         """Run time scheduled task"""
         self.timer_count += 1
-        if self.timer_count < 20:
+        if self.timer_count < 10:
             return
         self.timer_count = 0
 
+        self.rest_api.query_account()
+        self.rest_api.query_position()
         self.public_ws_api.send_heartbeat()
         self.private_ws_api.send_heartbeat()
 
@@ -735,6 +737,7 @@ class BybitRestApi(RestClient):
                 direction=Direction.NET,
                 volume=volume,
                 price=float(d["avgPrice"]),
+                pnl=float(d["unrealisedPnl"]),
                 gateway_name=self.gateway_name
             )
             self.gateway.on_position(position)
@@ -830,7 +833,7 @@ class BybitPublicWebsocketApi:
         client.on_connected = partial(self.on_connected, category=category)
         client.on_disconnected = partial(self.on_disconnected, category=category)
         client.on_packet = partial(self.on_packet, category=category)
-        client.on_error = partial(self.on_error, category=category)
+        client.on_error = partial(self.on_error,category=category)
 
         # Get host
         if self.server == "REAL":
@@ -910,7 +913,10 @@ class BybitPublicWebsocketApi:
         for client in self.clients.values():
             if client.is_connected:
                 req: dict = {"op": "ping"}
-                client.send_packet(req)
+                try:
+                    client.send_packet(req)
+                except Exception as e:
+                    self.gateway.write_log(f"Public Websocket API Send heartbeat ping failed: {e}")
 
     def on_connected(self, category: str) -> None:
         """Callback when server is connected"""
@@ -932,10 +938,11 @@ class BybitPublicWebsocketApi:
             self.subscribe_topic(client, f"tickers.{req.symbol}", self.on_ticker)
             self.subscribe_topic(client, f"orderbook.{depth}.{req.symbol}", self.on_depth)
 
-    def on_disconnected(self, category: str, status_code: int, msg: str) -> None:
+    def on_disconnected(self, status_code: int, msg: str, category: str) -> None:
         """Callback when server is disconnected"""
-        client: WebsocketClient = self.get_client(category)
-        # client.is_connected = False
+
+        client: WebsocketClient = self.clients[category]
+        client.is_connected = False
 
         self.gateway.write_log(f"Public websocket stream of {category} is disconnected")
 
@@ -952,9 +959,11 @@ class BybitPublicWebsocketApi:
         if callback:
             callback(packet)
 
-    def on_error(self, e: Exception) -> None:
+    def on_error(self, e: Exception, category: str) -> None:
         """General error callback"""
-        msg: str = f"Exception catched by public websocket API: {e}"
+        client: WebsocketClient = self.clients[category]
+        client.is_connected = False
+        msg: str = f"Exception catched by public websocket API of {category}: {e}"
         self.gateway.write_log(msg)
 
     def on_ticker(self, packet: dict) -> None:
@@ -1086,7 +1095,10 @@ class BybitPrivateWebsocketApi(WebsocketClient):
         """Send heartbeat ping"""
         if self.is_connected:
             req: dict = {"op": "ping"}
-            self.send_packet(req)
+            try:
+                self.send_packet(req)
+            except Exception as e:
+                self.gateway.write_log(f"Private Websocket API Send heartbeat ping failed: {e}")
 
     def on_connected(self) -> None:
         """Callback when server is connected"""
@@ -1096,7 +1108,7 @@ class BybitPrivateWebsocketApi(WebsocketClient):
 
     def on_disconnected(self, status_code: int, msg: str) -> None:
         """Callback when server is disconnected"""
-        # self.is_connected = False
+        self.is_connected = False
         self.gateway.write_log("Private websocket stream is disconnected")
 
     def on_packet(self, packet: dict) -> None:
@@ -1114,6 +1126,7 @@ class BybitPrivateWebsocketApi(WebsocketClient):
 
     def on_error(self, e: Exception) -> None:
         """General error callback"""
+        self.is_connected = False
         msg: str = f"Exception catched by private websocket API: {e}"
         self.gateway.write_log(msg)
 
