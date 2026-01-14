@@ -362,11 +362,13 @@ class BybitRestApi(RestClient):
     def query_order(self) -> None:
         """Query open orders"""
         for category in ["spot", "linear", "inverse", "option"]:
-            params: dict = {"category": category}
 
             if category == "linear":
                 for coin in ["USDT", "USDC"]:
-                    params["settleCoin"] = coin
+                    params: dict = {
+                        "category": category,
+                        "settleCoin": coin,
+                    }
 
                     self.add_request(
                         "GET",
@@ -375,6 +377,9 @@ class BybitRestApi(RestClient):
                         params=params
                     )
             else:
+                params: dict = {
+                    "category": category,
+                }
                 self.add_request(
                     "GET",
                     "/v5/order/realtime",
@@ -398,15 +403,14 @@ class BybitRestApi(RestClient):
     def query_position(self) -> None:
         """Query holding positions"""
         for category in ["linear", "inverse", "option"]:
-            params: dict = {
-                "category": category,
-                "limit": 200
-            }
 
             if category == "linear":
                 for coin in ["USDT", "USDC"]:
-                    params["settleCoin"] = coin
-
+                    params: dict = {
+                        "category": category,
+                        "limit": 200,
+                        "settleCoin": coin,
+                    }
                     self.add_request(
                         "GET",
                         "/v5/position/list",
@@ -414,6 +418,10 @@ class BybitRestApi(RestClient):
                         params=params
                     )
             else:
+                params: dict = {
+                    "category": category,
+                    "limit": 200
+                }
                 self.add_request(
                     "GET",
                     "/v5/position/list",
