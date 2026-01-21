@@ -449,9 +449,6 @@ class BybitRestApi(RestClient):
             "orderLinkId": orderid
         }
 
-        if req.offset == Offset.CLOSE:
-            data["reduceOnly"] = True
-
         # Send request
         self.add_request(
             "POST",
